@@ -32,27 +32,34 @@ fn handle_connection(mut stream: TcpStream) {
     if method == "GET" && version == "HTTP/1.1" {
         let file_name = if target == "/" { "index.html" } else { &target[1..] };
         if fs::metadata(file_name).is_ok() {
-            let status_line = "HTTP/1.1 200 OK";
-            let contents = fs::read_to_string(file_name).unwrap();
-            let length = contents.len();
-            let response = format!("{}\r\nContent-Length: {}\r\n\r\n{}", status_line, length, contents);
-            stream.write_all(response.as_bytes()).unwrap();
+            let contents = fs::read_to_string(file_name);
+            match contents {
+                Ok(contents) => {
+                    let status_line = "HTTP/1.1 200 OK";
+                    let length = contents.len();
+                    let response = format!("{}\r\nContent-Length: {}\r\n\r\n{}", status_line, length, contents);
+                    stream.write_all(response.as_bytes()).unwrap();
+                },
+                Err(_) => {
+                    let status_line = "HTTP/1.1 403 FORBIDDEN";
+                    let contents = "403 Forbidden";
+                    let length = contents.len();
+                    let response = format!("{}\r\nContent-Length: {}\r\n\r\n{}", status_line, length, contents);
+                    stream.write_all(response.as_bytes()).unwrap()
+                }
+            }
         } else {
             let status_line = "HTTP/1.1 404 NOT FOUND";
             let contents = "404 not found" ;
             let length = contents.len();
             let response = format!("{}\r\nContent-Length: {}\r\n\r\n{}", status_line, length, contents);
             stream.write_all(response.as_bytes()).unwrap();
-            
         }
-    } 
-    else if method != "GET"{
-
+    } else if method != "GET" {
         let status_line = "HTTP/1.1 405 METHOD NOT ALLOWED";
         let contents = "405 method not allowed" ;
         let length = contents.len();
         let response = format!("{}\r\nContent-Length: {}\r\n\r\n{}", status_line, length, contents);
         stream.write_all(response.as_bytes()).unwrap();
-        
     }
 }
